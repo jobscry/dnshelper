@@ -5,19 +5,36 @@ import dns.resolver
 from geoip import geolite2
 
 
-@click.command()
+class DNSHelper(object):
+	def __init__(self, host='google.com', geo_lookup=False, first_type='MX'):
+		self.host = host
+		self.geo_lookup = geo_lookup
+		self.first_type = first_type
+
+@click.group()
 @click.argument('host')
 @click.option('--first_type', default='MX', help="Initial lookup type (MX is default).")
 @click.option('--geo_lookup', is_flag=True, help="Country lookup?")
-def get_records(host, first_type, geo_lookup):
-	"""Get DNS records as list of IPs"""
-	lookups = [(host, first_type)]
+@click.pass_context
+def cli(ctx, host, first_type, geo_lookup):
+	ctx.obj = DNSHelper(host, geo_lookup, first_type)
+
+@cli.command()
+@click.pass_obj
+def mx_lookup(obj):
+	"""Get MX records as list of IPs"""
+	obj.first_type = 'MX'
+	_lookups()
+
+@click.pass_obj
+def _lookups(obj):
+	lookups = [(obj.host, obj.first_type)]
 	while lookups:
 		lookup = lookups.pop()
 		answers = dns.resolver.query(lookup[0], lookup[1])
 		for answer in answers:
 			if hasattr(answer, 'address'):
-				if geo_lookup:
+				if obj.geo_lookup:
 					address = answer.address
 					match = geolite2.lookup(address)
 					if match is not None:
@@ -29,4 +46,4 @@ def get_records(host, first_type, geo_lookup):
 
 
 if __name__ == '__main__':
-	get_records()
+	cli()
