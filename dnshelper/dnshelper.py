@@ -6,29 +6,26 @@ from geoip import geolite2
 
 
 class DNSHelper(object):
-	def __init__(self, host='google.com', geo_lookup=False, first_type='MX'):
+	def __init__(self, host='google.com', geo_lookup=False):
 		self.host = host
 		self.geo_lookup = geo_lookup
-		self.first_type = first_type
 
 @click.group()
 @click.argument('host')
-@click.option('--first_type', default='MX', help="Initial lookup type (MX is default).")
 @click.option('--geo_lookup', is_flag=True, help="Country lookup?")
 @click.pass_context
-def cli(ctx, host, first_type, geo_lookup):
-	ctx.obj = DNSHelper(host, geo_lookup, first_type)
+def cli(ctx, host, geo_lookup):
+	ctx.obj = DNSHelper(host, geo_lookup)
 
 @cli.command()
 @click.pass_obj
 def mx_lookup(obj):
 	"""Get MX records as list of IPs"""
-	obj.first_type = 'MX'
-	_lookups()
+	_lookups(first_type='MX')
 
 @click.pass_obj
-def _lookups(obj):
-	lookups = [(obj.host, obj.first_type)]
+def _lookups(obj, first_type):
+	lookups = [(obj.host, first_type)]
 	while lookups:
 		lookup = lookups.pop()
 		answers = dns.resolver.query(lookup[0], lookup[1])
